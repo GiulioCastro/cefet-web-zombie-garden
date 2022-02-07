@@ -26,10 +26,15 @@ router.get('/', async (req, res, next) => {
     //   - por exemplo, assim que uma pessoa é excluída, uma mensagem de
     //     sucesso pode ser mostrada
     // - error: idem para mensagem de erro
-    res.render('list-people', {
-      people,
-      success: req.flash('success'),
-      error: req.flash('error')
+    
+    // negociação de conteúdo
+    res.format({      
+      html: () => res.render('list-people', { 
+        people, 
+        success: req.flash('success'),
+        error: req.flash('error')
+      }),
+      json: () => res.json({ people })
     })
 
   } catch (error) {
@@ -89,6 +94,25 @@ router.get('/new/', (req, res) => {
 //      - Em caso de sucesso do INSERT, colocar uma mensagem feliz
 //      - Em caso de erro do INSERT, colocar mensagem vermelhinha
 
+router.post('/', async (req, res) => {
+  const personName = req.body.name
+  try {
+    const [insertResult] = await db.execute(
+      `INSERT INTO person (id, name)
+       VALUES (NULL, ?)`,
+      [personName]
+    )
+    if (insertResult.affectedRows === 1) {
+      req.flash('success', 'Uma nova pessoa foi adicionada!')
+    } else {
+      req.flash('error', 'Não foi possível adicionar essa pessoa.')
+    }
+  } catch (error) {
+    req.flash('error', `Erro desconhecido. Descrição: ${error}`)
+  } finally {
+    res.redirect('/people')
+  }
+})
 
 /* DELETE uma pessoa */
 // Exercício 2: IMPLEMENTAR AQUI
@@ -98,5 +122,25 @@ router.get('/new/', (req, res) => {
 //      - Em caso de sucesso do INSERT, colocar uma mensagem feliz
 //      - Em caso de erro do INSERT, colocar mensagem vermelhinha
 
+router.delete('/:id', async (req, res) => {
+  const personId = req.params.id
+  try {
+    const [deleteResult] = await db.execute(
+      `DELETE
+      FROM person
+      WHERE id=?`,
+    [personId]) 
+
+    if (deleteResult.affectedRows === 1) {
+      req.flash('success', 'Pessoa removida com sucesso.')
+    } else {
+      req.flash('error', 'Não foi possível remover essa pessoa.')
+    }    
+  } catch (error) {
+    req.flash('error', `Erro desconhecido. Descrição: ${error}`)    
+  } finally {
+    res.redirect('/people')
+  }
+})
 
 export default router
